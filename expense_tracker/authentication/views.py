@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views import View
 import json
 from django.http import JsonResponse
@@ -6,6 +6,11 @@ from django.contrib.auth.models import User
 from validate_email import validate_email
 from django.contrib import messages
 from django.core.mail import EmailMessage
+from django.utils.encoding import force_bytes,force_text,DjangoUnicodeDecodeError
+from django.utils.http import urlsafe_base64_decode,urlsafe_base64_encode
+from django.contrib.sites.shortcuts import get_current_site
+from django.urls import reverse
+from authentication.utils import token_generator
 # Create your views here.
 
 
@@ -54,9 +59,14 @@ class SignupView(View):
             user.set_password(password)
             user.is_active = False
 
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            domain = get_current_site(request).domain
+            link = reverse('activate',kwargs={"uidb64":uidb64,"token":token_generator.make_token(user)})
+            activate_url = f'http://{domain}{link}'
+
             # Email
             email_subject = "Account Activation Email"
-            email_body = "Test Body"
+            email_body = f"Hi, {user.username}. Please use this link to verify your account.\n{activate_url}"
             email = EmailMessage(
                 email_subject, email_body, 'noreply@semicolon.com', [email],
             )
@@ -67,3 +77,8 @@ class SignupView(View):
             return render(request, 'authentication/signup.html')
 
         return render(request, 'authentication/signup.html')
+
+
+class VerificationView(View):
+    def get(self, request, uidb64, token):
+        return redirect('index')

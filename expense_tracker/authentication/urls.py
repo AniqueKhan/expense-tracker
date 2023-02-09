@@ -7,4 +7,6 @@ urlpatterns = [
          name='validate-username'),
     path("validate_email", csrf_exempt(EmailValidationView.as_view()),
          name='validate-email'),
+    path("activate/<uidb64>/<token>", VerificationView.as_view(),
+         name='activate'),
 ]
